@@ -477,8 +477,8 @@ def generate_optimal_solution(m,n,rot=0.0):
     assert n==6 # Possibly implement other values of n later. See page 46 of dynamical bayseanism paper and code that automatically finds solution(s).
     # Solutions exist for multiples of 4 and 5,6 and 7
     if n == 6:
-        l =1.4142 # confusion: I get as the optimal parameter for the length: 1.4142, but the paper says 1.32053
-        init_b = - np.ones((n,1)) *0.9999 # confusion: I get through training, that the optimal bias is -0.9999 instead of 0.61814
+        l =1.32053 # confusion: I get as the optimal parameter for the length: 1.4142, but the paper says 1.32053
+        init_b = - np.ones((n,1)) * 0.61814 # confusion: I get through training, that the optimal bias is -0.9999 instead of 0.61814
         
 
     init_w = generate_2d_kgon_vertices(n, rot=rot, force_length=l, pad_to=n)
