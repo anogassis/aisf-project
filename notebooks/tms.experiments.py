@@ -477,8 +477,9 @@ def generate_optimal_solution(m,n,rot=0.0):
     assert n==6 # Possibly implement other values of n later. See page 46 of dynamical bayseanism paper and code that automatically finds solution(s).
     # Solutions exist for multiples of 4 and 5,6 and 7
     if n == 6:
-        l =1.32053 # confusion: I get as the optimal parameter for the length: 1.4142, but the paper says 1.32053
-        init_b = - np.ones((n,1)) * 0.61814 # confusion: I get through training, that the optimal bias is -0.9999 instead of 0.61814
+        l =1.4142 # confusion: I get as the optimal parameter for the length: 1.4142, but the paper says 1.32053
+        init_b = - np.ones((n,1)) *0.9999 # confusion: I get through training, that the optimal bias is -0.9999 instead of 0.61814
+    #TODO: train again with parameters from paper (ideally with n parameters)
         
 
     init_w = generate_2d_kgon_vertices(n, rot=rot, force_length=l, pad_to=n)
@@ -842,7 +843,7 @@ training_dicts = {
     "prior_std": [0],
     "seed": [i for i in range(50)],
 },
-    "1.5.0": 
+    "1.5.0":  # When I ran this version, I used the wrong initilisation for the k-gon. Because that function was so far not included in the dictionary. 1.6.0 is the same dictionary (unless I add the k-gon initialisation function)
     {
     "m": [6],
     "n": [2],
@@ -858,7 +859,45 @@ training_dicts = {
     "init_zerobias": [False],
     "prior_std": [0],
     "seed": [i for i in range(50)],
-}}
+}, 
+    "1.6.0": 
+    {
+    "m": [6],
+    "n": [2],
+    "num_samples": [100], #Later in iteration 2 we will try 1000 samples
+    "batch_size": [1024],
+    "num_epochs": [20000],
+    "sparsity": generate_sparsity_values(5, 10),
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [0],
+    "seed": [i for i in range(50)],
+},
+
+    "1.7.0": 
+    {
+    "m": [6],
+    "n": [2],
+    "num_samples": [1000], #Later in iteration 2 we will try 1000 samples
+    "batch_size": [1024],
+    "num_epochs": [20000],
+    "sparsity": generate_sparsity_values(5, 10),
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [0],
+    "seed": [i for i in range(50)],
+},
+    
+    
+    }
 
 test_dict = {
     "m": [6],
@@ -1014,7 +1053,7 @@ def plot_experiments(
 # Run experiments
 
 # %%
-version = "1.5.0"
+version = "1.7.0"
 file_name = f'../data/logs_loss_{version}'
 results = run_experiments(
     training_dicts[version],
