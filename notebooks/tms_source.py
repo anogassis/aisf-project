@@ -665,9 +665,9 @@ def create_and_train(
     torch.manual_seed(seed)
 
     model = ToyAutoencoder(m, n, final_bias=True)
+    init_weights = generate_init_param(n, m, init_kgon, prior_std=prior_std, no_bias=no_bias, init_zerobias=init_zerobias, seed=seed)
 
     model.embedding.weight.data = torch.from_numpy(init_weights["W"]).float()
-    init_weights = generate_init_param(m, n, init_kgon, prior_std=prior_std, no_bias=no_bias, init_zerobias=init_zerobias, seed=seed)
     if use_optimal_solution:
         init_weights = generate_optimal_solution(m, n, rot=0.0)
 
@@ -1041,7 +1041,7 @@ training_dicts = {
     "num_samples": [100], 
     "batch_size": [1024],
     "num_epochs": [20000],
-    "sparsity": generate_sparsity_values(5, 10),
+    "sparsity": [x for x in generate_sparsity_values(5, 10) if x != 0],
     "lr": [0.005],
     "momentum": [0.9],
     "weight_decay": [0.0],
