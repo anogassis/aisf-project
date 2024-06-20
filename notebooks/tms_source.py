@@ -774,6 +774,9 @@ def run_experiments(
             continue
         params = dict(zip(param_names, combination))
 
+        if not 'use_optimal_solution' in params.keys():
+            raise Exception("use_optimal_solution needs to be defined. Update the training dictionary and rerun this function.")
+
         # Calculate `log_ivl` based on `num_epochs`
         num_epochs = params.get('num_epochs', 100)
         num_observations = 50  # As per example
@@ -936,6 +939,7 @@ training_dicts = {
     "init_zerobias": [False],
     "prior_std": [0],
     "seed": [i for i in range(10)],
+    "use_optimal_solution": [True],
 },
     "1.3.0": 
     {
@@ -953,6 +957,7 @@ training_dicts = {
     "init_zerobias": [False],
     "prior_std": [0],
     "seed": [i for i in range(50)],
+    "use_optimal_solution": [True],
 },
     "1.4.0": 
     {
@@ -970,6 +975,7 @@ training_dicts = {
     "init_zerobias": [False],
     "prior_std": [0],
     "seed": [i for i in range(50)],
+    "use_optimal_solution": [True],
 },
     "1.5.0":  # When I ran this version, I used the wrong initilisation for the k-gon. Because that function was so far not included in the dictionary. 1.6.0 is the same dictionary (unless I add the k-gon initialisation function)
     {
@@ -987,7 +993,7 @@ training_dicts = {
     "init_zerobias": [False],
     "prior_std": [0],
     "seed": [i for i in range(50)],
-    "use_optimal_solution": True,
+    "use_optimal_solution": [True],
 }, 
     "1.6.0": 
     {
@@ -1005,7 +1011,7 @@ training_dicts = {
     "init_zerobias": [False],
     "prior_std": [0],
     "seed": [i for i in range(50)],
-    "use_optimal_solution": True,
+    "use_optimal_solution": [True],
 },
 
     "1.7.0": 
@@ -1025,7 +1031,7 @@ training_dicts = {
     "init_zerobias": [False],
     "prior_std": [0],
     "seed": [i for i in range(50)],
-    "use_optimal_solution": True,
+    "use_optimal_solution": [True],
 },
      "1.8.0":  
     # New quick run to see if the learning coefficients are more interpretable, if we are initializing at a more random spot.
@@ -1044,7 +1050,7 @@ training_dicts = {
     "init_zerobias": [False],
     "prior_std": [1.],
     "seed": [i for i in range(50)],
-    "use_optimal_solution": False,
+    "use_optimal_solution": [False],
 },
     }
 
@@ -1062,5 +1068,6 @@ test_dict = {
     "no_bias": [False],
     "init_zerobias": [False],
     "prior_std": [10.],
-    "seed": [42]
+    "seed": [42],
+    "use_optimal_solution": [False],
 }
