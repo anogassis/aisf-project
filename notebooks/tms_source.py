@@ -874,7 +874,8 @@ def load_results(version="1.5.0"):
     return results
 
 def plot_results(results, plot_number =5):
-    for sparse_value in generate_sparsity_values(5, 10):
+    sparsity = [result['parameters']['sparsity'] for result in results]
+    for sparse_value in sparsity:
         plotted =0
         print(f"Plot polygons for sparsity={sparse_value}")
         for index in range(len(results)):
@@ -891,7 +892,7 @@ def plot_results(results, plot_number =5):
 
             losses = [logs.loc[logs['step'] == s, 'loss'].values[0] for s in STEPS]
 
-            NUM_EPOCHS = 20000
+            NUM_EPOCHS = results['parameters']['num_epochs']
             PLOT_STEPS = [min(STEPS, key=lambda s: abs(s-i)) for i in [0, 200, 2000, 10000, NUM_EPOCHS - 1]]
             PLOT_INDICES = [STEPS.index(s) for s in PLOT_STEPS]
             Ws = [results[index]['weights'][i]['embedding.weight'] for i in PLOT_INDICES]
@@ -905,8 +906,6 @@ def plot_results(results, plot_number =5):
         
             model.load_state_dict(new_weights)
 
-            # print(sample)
-            # print(model(sample))
             test_set = SyntheticBinaryValued(10000, 6, sparse_value)
             mean_loss_test = 0
             for sample in test_set:
@@ -915,12 +914,153 @@ def plot_results(results, plot_number =5):
             # print("Mean loss test:")
             print(f"index: {index}")
             print(mean_loss_test/10000)
-            # if mean_loss_test<20:
-            #     continue
-            # else:
-            #     weird_indices.append(index)
-            
 
-            #all_weights = [[results[j]['weights'][i] for i in PLOT_INDICES] for j in range(len(results))]
             plot_losses_and_polygons(STEPS, losses, PLOT_STEPS, Ws, biases)
             plt.show()
+
+
+training_dicts = {
+   "debug":
+{
+    "m": [6],
+    "n": [2],
+    "num_samples": [100], 
+    "batch_size": [1024],
+    "num_epochs": [4500],
+    "sparsity": generate_sparsity_values(5, 10),
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [0],
+    "seed": [i for i in range(10)],
+},
+    "1.3.0": 
+    {
+    "m": [6],
+    "n": [2],
+    "num_samples": [100], #Later in iteration 2 we will try 1000 samples
+    "batch_size": [1024],
+    "num_epochs": [20000],
+    "sparsity": generate_sparsity_values(5, 10),
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [0],
+    "seed": [i for i in range(50)],
+},
+    "1.4.0": 
+    {
+    "m": [6],
+    "n": [2],
+    "num_samples": [10000],
+    "batch_size": [1024],
+    "num_epochs": [20000],
+    "sparsity": generate_sparsity_values(5, 10),
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [0],
+    "seed": [i for i in range(50)],
+},
+    "1.5.0":  # When I ran this version, I used the wrong initilisation for the k-gon. Because that function was so far not included in the dictionary. 1.6.0 is the same dictionary (unless I add the k-gon initialisation function)
+    {
+    "m": [6],
+    "n": [2],
+    "num_samples": [100], #Later in iteration 2 we will try 1000 samples
+    "batch_size": [1024],
+    "num_epochs": [20000],
+    "sparsity": generate_sparsity_values(5, 10),
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [0],
+    "seed": [i for i in range(50)],
+    "use_optimal_solution": True,
+}, 
+    "1.6.0": 
+    {
+    "m": [6],
+    "n": [2],
+    "num_samples": [100], #Later in iteration 2 we will try 1000 samples
+    "batch_size": [1024],
+    "num_epochs": [20000],
+    "sparsity": generate_sparsity_values(5, 10),
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [0],
+    "seed": [i for i in range(50)],
+    "use_optimal_solution": True,
+},
+
+    "1.7.0": 
+    #Big run initialized at optimal solution to see if we get interesting things out of the learning coefficients.
+    {
+    "m": [6],
+    "n": [2],
+    "num_samples": [1000], 
+    "batch_size": [1024],
+    "num_epochs": [20000],
+    "sparsity": generate_sparsity_values(5, 10),
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [0],
+    "seed": [i for i in range(50)],
+    "use_optimal_solution": True,
+},
+     "1.8.0":  
+    # New quick run to see if the learning coefficients are more interpretable, if we are initializing at a more random spot.
+    {
+    "m": [6],
+    "n": [2],
+    "num_samples": [100], 
+    "batch_size": [1024],
+    "num_epochs": [20000],
+    "sparsity": generate_sparsity_values(5, 10),
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [4],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [1.],
+    "seed": [i for i in range(50)],
+    "use_optimal_solution": False,
+},
+    }
+
+test_dict = {
+    "m": [6],
+    "n": [2],
+    "num_samples": [100],
+    "batch_size": [300],
+    "num_epochs": [2000],
+    "sparsity": [1],
+    "lr": [0.001],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [10.],
+    "seed": [42]
+}
