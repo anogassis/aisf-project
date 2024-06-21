@@ -1,25 +1,3 @@
-# %% [markdown]
-# <a href="https://colab.research.google.com/github/anogassis/aisf-project/blob/eda-notebooks/notebooks/1.1-aa-tms-experiments_tassilo.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
-
-# %% [markdown]
-# # Toy Models of Superposition
-# 
-# [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/timaeus-research/devinterp/blob/main/examples/tms.ipynb)
-# 
-# Let's run through an example using Anthropic's toy models of superposition.
-# 
-# This example is mostly to test that our SGLD estimator is working as expected and to figure out how to integrate this in an SGD setting.
-# 
-# Credits: [Chen et al. (2023)](https://arxiv.org/abs/2310.06301).
-
-# %% [markdown]
-# ## Set-up
-
-# %% [markdown]
-# 
-# ### Imports
-
-# %%
 import os
 import pickle
 import numpy as np
@@ -40,112 +18,24 @@ from devinterp.slt import estimate_learning_coeff_with_summary
 from devinterp.optim.sgld import SGLD
 from collections import defaultdict
 
-
-#from google.colab import drive
-#drive.mount('/content/drive')
-
-
-# %% [markdown]
-# ### Toy Models & Data Generation
-
-# %%
-class ToyAutoencoder(nn.Module):
-    """
-    Basic Network class for linear transformation with non-linear activations
-    """
-
-    def __init__(
-        self,
-        input_dim: int,
-        hidden_dim: int,
-        n_instances: int = 1,
-        tied: bool = True,
-        final_bias: bool = False,
-        hidden_bias: bool = False,
-        nonlinearity: Callable = F.relu,
-        unit_weights: bool = False,
-        standard_magnitude: bool = False,
-        initial_scale_factor: float = 1.0,
-        initial_bias: Optional[torch.Tensor] = None,
-        initial_embed: Optional[torch.Tensor] = None,
-    ):
-        super().__init__()
-
-        # Set the dimensions and parameters
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-        self.n_instances = n_instances
-        self.nonlinearity = nonlinearity
-        self.tied = tied
-        self.final_bias = final_bias
-        self.unit_weights = unit_weights
-        self.standard_magnitude = standard_magnitude
-
-        # Define the input layer (embedding)
-        self.embedding = nn.Linear(self.input_dim, self.hidden_dim, bias=hidden_bias)
-
-        # Set initial embeddings if provided
-        if initial_embed is not None:
-            self.embedding.weight.data = initial_embed
-
-        # Define the output layer (unembedding)
-        self.unembedding = nn.Linear(self.hidden_dim, self.input_dim, bias=final_bias)
-
-        # Set initial bias if provided
-        if initial_bias is not None:
-            self.unembedding.bias.data = initial_bias
-
-        # If standard magnitude is set, normalize weights and maintain average norm
-        if self.standard_magnitude:
-            avg_norm = torch.norm(self.embedding.weight.data, p=2, dim=0).mean()
-            self.embedding.weight.data = (
-                F.normalize(self.embedding.weight.data, p=2, dim=0) * avg_norm
-            )
-
-        # If unit weights is set, normalize weights
-        if self.unit_weights:
-            self.embedding.weight.data = F.normalize(self.embedding.weight.data, p=2, dim=0)
-
-        # Tie the weights of embedding and unembedding layers
-        if tied:
-            self.unembedding.weight = torch.nn.Parameter(self.embedding.weight.transpose(0, 1))
-
-
-    def forward(self, x: torch.Tensor):
-        """
-        Forward pass through the network
-        """
-        # Apply the same steps for weights as done during initialization
-        if self.unit_weights:
-            self.embedding.weight.data = F.normalize(self.embedding.weight.data, p=2, dim=0)
-
-        if self.standard_magnitude:
-            avg_norm = torch.norm(self.embedding.weight.data, p=2, dim=0).mean()
-            self.embedding.weight.data = (
-                F.normalize(self.embedding.weight.data, p=2, dim=0) * avg_norm
-            )
-
-        if self.tied:
-            self.unembedding.weight.data = self.embedding.weight.data.transpose(0, 1)
-
-        x = self.embedding(x)
-        x = self.unembedding(x)
-        x = self.nonlinearity(x)
-
-        return x
-
-
-# %%
-"""
-Adapted from [TMS-zoo](https://github.com/JakeMendel/TMS-zoo)
-"""
-
 from abc import ABC
 from typing import Union
 
 import torch
 from torch.utils.data import Dataset
 
+torch.manual_seed(1)
+
+DEVICE = os.environ.get(
+    "DEVICE",
+    "cuda:0"
+    if torch.cuda.is_available()
+    else "mps"
+    if torch.backends.mps.is_available()
+    else "cpu",
+)
+DEVICE = torch.device(DEVICE)
+NUM_CORES = int(os.environ.get("NUM_CORES", 1))
 
 class SyntheticDataset(Dataset, ABC):
     num_samples: int
@@ -238,7 +128,96 @@ class SyntheticBinaryValued(SyntheticDataset):
         return 1.0
 
 
-# %%
+
+class ToyAutoencoder(nn.Module):
+    """
+    Basic Network class for linear transformation with non-linear activations
+    """
+
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_dim: int,
+        n_instances: int = 1,
+        tied: bool = True,
+        final_bias: bool = False,
+        hidden_bias: bool = False,
+        nonlinearity: Callable = F.relu,
+        unit_weights: bool = False,
+        standard_magnitude: bool = False,
+        initial_scale_factor: float = 1.0,
+        initial_bias: Optional[torch.Tensor] = None,
+        initial_embed: Optional[torch.Tensor] = None,
+    ):
+        super().__init__()
+
+        # Set the dimensions and parameters
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.n_instances = n_instances
+        self.nonlinearity = nonlinearity
+        self.tied = tied
+        self.final_bias = final_bias
+        self.unit_weights = unit_weights
+        self.standard_magnitude = standard_magnitude
+
+        # Define the input layer (embedding)
+        self.embedding = nn.Linear(self.input_dim, self.hidden_dim, bias=hidden_bias)
+
+        # Set initial embeddings if provided
+        if initial_embed is not None:
+            self.embedding.weight.data = initial_embed
+
+        # Define the output layer (unembedding)
+        self.unembedding = nn.Linear(self.hidden_dim, self.input_dim, bias=final_bias)
+
+        # Set initial bias if provided
+        if initial_bias is not None:
+            self.unembedding.bias.data = initial_bias
+
+        # If standard magnitude is set, normalize weights and maintain average norm
+        if self.standard_magnitude:
+            avg_norm = torch.norm(self.embedding.weight.data, p=2, dim=0).mean()
+            self.embedding.weight.data = (
+                F.normalize(self.embedding.weight.data, p=2, dim=0) * avg_norm
+            )
+
+        # If unit weights is set, normalize weights
+        if self.unit_weights:
+            self.embedding.weight.data = F.normalize(self.embedding.weight.data, p=2, dim=0)
+
+        # Tie the weights of embedding and unembedding layers
+        if tied:
+            self.unembedding.weight = torch.nn.Parameter(self.embedding.weight.transpose(0, 1))
+
+
+    def forward(self, x: torch.Tensor):
+        """
+        Forward pass through the network
+        """
+        # Apply the same steps for weights as done during initialization
+        if self.unit_weights:
+            self.embedding.weight.data = F.normalize(self.embedding.weight.data, p=2, dim=0)
+
+        if self.standard_magnitude:
+            avg_norm = torch.norm(self.embedding.weight.data, p=2, dim=0).mean()
+            self.embedding.weight.data = (
+                F.normalize(self.embedding.weight.data, p=2, dim=0) * avg_norm
+            )
+
+        if self.tied:
+            self.unembedding.weight.data = self.embedding.weight.data.transpose(0, 1)
+
+        x = self.embedding(x)
+        x = self.unembedding(x)
+        x = self.nonlinearity(x)
+
+        return x
+
+
+#from google.colab import drive
+#drive.mount('/content/drive')
+
 def calculate_convex_hull_vertices(W: torch.Tensor) -> int:
     """
     Calculate the number of vertices of the convex hull of the points represented by the columns of W.
@@ -409,28 +388,6 @@ def plot_rate_of_change_of_kgons(weights: Dict[int, List[List[Dict[str, torch.Te
     plt.legend()
     plt.show()
 
-
-# %% [markdown]
-# ### Environmental variables
-
-# %%
-torch.manual_seed(1)
-
-DEVICE = os.environ.get(
-    "DEVICE",
-    "cuda:0"
-    if torch.cuda.is_available()
-    else "mps"
-    if torch.backends.mps.is_available()
-    else "cpu",
-)
-DEVICE = torch.device(DEVICE)
-NUM_CORES = int(os.environ.get("NUM_CORES", 1))
-
-# %% [markdown]
-# ### K-gon Plotting Utils
-
-# %%
 def generate_2d_kgon_vertices(k, rot=0., pad_to=None, force_length=0.9):
     """Set the weights of a 2D k-gon to be the vertices of a regular k-gon."""
     # Angles for the vertices
@@ -479,7 +436,6 @@ def generate_optimal_solution(m,n,rot=0.0):
     if n == 6:
         l =1.4142 # confusion: I get as the optimal parameter for the length: 1.4142, but the paper says 1.32053
         init_b = - np.ones((n,1)) *0.9999 # confusion: I get through training, that the optimal bias is -0.9999 instead of 0.61814
-    #TODO: train again with parameters from paper (ideally with n parameters)
         
 
     init_w = generate_2d_kgon_vertices(n, rot=rot, force_length=l, pad_to=n)
@@ -489,7 +445,6 @@ def generate_optimal_solution(m,n,rot=0.0):
     }
     return param
 
-# %%
 def plot_polygon(
     W: torch.Tensor,
     b=None,
@@ -663,10 +618,31 @@ def plot_losses_and_polygons(steps, losses, highlights, Ws, biases,xscale="log",
     plt.tight_layout()
 
 
-# %% [markdown]
-# ### Training loop
+def generate_init_param(m, n, init_kgon, prior_std=1., no_bias=True, init_zerobias=True, seed=0, force_negb=False, noise=0.01):
+    np.random.seed(seed)
 
-# %%
+    if init_kgon is None or m != 2:
+        init_W = np.random.normal(size=(m, n)) * prior_std
+    else:
+        assert init_kgon <= n
+        rand_angle = np.random.uniform(0, 2 * np.pi, size=(1,))
+        noise = np.random.normal(size=(m, n)) * noise
+        init_W = generate_2d_kgon_vertices(init_kgon, rot=rand_angle, pad_to=n) + noise
+
+    if no_bias:
+        param = {"W": init_W}
+    else:
+        init_b = np.random.normal(size=(n, 1)) * prior_std
+        if force_negb:
+            init_b = -np.abs(init_b)
+        if init_zerobias:
+            init_b = init_b * 0
+        param = {
+            "W": init_W,
+            "b": init_b
+        }
+    return param
+
 def create_and_train(
     m: int,
     n: int,
@@ -683,14 +659,17 @@ def create_and_train(
     no_bias=False,
     init_zerobias=False,
     prior_std=10.,
-    seed=0
+    seed=0,
+    use_optimal_solution=False,
 ):
     torch.manual_seed(seed)
 
     model = ToyAutoencoder(m, n, final_bias=True)
+    init_weights = generate_init_param(n, m, init_kgon, prior_std=prior_std, no_bias=no_bias, init_zerobias=init_zerobias, seed=seed)
 
-    init_weights = generate_optimal_solution(n,m)
     model.embedding.weight.data = torch.from_numpy(init_weights["W"]).float()
+    if use_optimal_solution:
+        init_weights = generate_optimal_solution(m, n, rot=0.0)
 
     if "b" in init_weights:
         model.unembedding.bias.data = torch.from_numpy(init_weights["b"].flatten()).float()
@@ -751,29 +730,6 @@ def create_and_train(
 
     return logs, weights
 
-# %% [markdown]
-# ## Design of Experiments
-# 
-# First, let's list the variables we can play with:
-# - Sparsity
-# - Number of samples
-# - Number of input features
-# - Number of hidden features
-# 
-# ### Variable ranges
-# 
-# Let's now define the ranges we want to explore for each of the variables we're interested in.
-# 
-# | Variable | Lower limit | Upper limit | Stepsize | Number of variations |
-# | -------- | ----------- | ----------- | -------- | --- |
-# | Sparsity | 0.0 | 1.0 | 0.25 | 5 |
-# | Number of samples | 100 | 10000 | Log 10 | 3 |
-# | Number of input features | 6 | 14 | 2 | 5 |
-# | Number of hidden features | 2 | 3 | 1 | 2 |
-# 
-# Total number of experiments if performing a full factorial: `5 * 3 * 5 * 2 = 150`
-
-# %%
 def generate_sparsity_values(scale, count):
     # Generate exponential values from 0 to scale
     x = np.linspace(0, scale, count)
@@ -781,145 +737,7 @@ def generate_sparsity_values(scale, count):
     values = 1 - np.exp(-x)
     return values
 
-# Example usage
-scale = 5  # Controls how quickly the values decay from 1 towards 0
-count = 10  # Number of hyperparameter values you want to generate
 
-
-# %%
-sparsity=generate_sparsity_values(5,10)
-sparsity
-
-# %%
-training_dicts = {
-   "debug":
-{
-    "m": [6],
-    "n": [2],
-    "num_samples": [100], #Later in iteration 2 we will try 1000 samples
-    "batch_size": [1024],
-    "num_epochs": [4500],
-    "sparsity": generate_sparsity_values(5, 10),
-    "lr": [0.005],
-    "momentum": [0.9],
-    "weight_decay": [0.0],
-    "init_kgon": [6],
-    "no_bias": [False],
-    "init_zerobias": [False],
-    "prior_std": [0],
-    "seed": [i for i in range(10)],
-},
-    "1.3.0": 
-    {
-    "m": [6],
-    "n": [2],
-    "num_samples": [100], #Later in iteration 2 we will try 1000 samples
-    "batch_size": [1024],
-    "num_epochs": [20000],
-    "sparsity": generate_sparsity_values(5, 10),
-    "lr": [0.005],
-    "momentum": [0.9],
-    "weight_decay": [0.0],
-    "init_kgon": [6],
-    "no_bias": [False],
-    "init_zerobias": [False],
-    "prior_std": [0],
-    "seed": [i for i in range(50)],
-},
-    "1.4.0": 
-    {
-    "m": [6],
-    "n": [2],
-    "num_samples": [10000], #Later in iteration 2 we will try 1000 samples
-    "batch_size": [1024],
-    "num_epochs": [20000],
-    "sparsity": generate_sparsity_values(5, 10),
-    "lr": [0.005],
-    "momentum": [0.9],
-    "weight_decay": [0.0],
-    "init_kgon": [6],
-    "no_bias": [False],
-    "init_zerobias": [False],
-    "prior_std": [0],
-    "seed": [i for i in range(50)],
-},
-    "1.5.0":  # When I ran this version, I used the wrong initilisation for the k-gon. Because that function was so far not included in the dictionary. 1.6.0 is the same dictionary (unless I add the k-gon initialisation function)
-    {
-    "m": [6],
-    "n": [2],
-    "num_samples": [100], #Later in iteration 2 we will try 1000 samples
-    "batch_size": [1024],
-    "num_epochs": [20000],
-    "sparsity": generate_sparsity_values(5, 10),
-    "lr": [0.005],
-    "momentum": [0.9],
-    "weight_decay": [0.0],
-    "init_kgon": [6],
-    "no_bias": [False],
-    "init_zerobias": [False],
-    "prior_std": [0],
-    "seed": [i for i in range(50)],
-}, 
-    "1.6.0": 
-    {
-    "m": [6],
-    "n": [2],
-    "num_samples": [100], #Later in iteration 2 we will try 1000 samples
-    "batch_size": [1024],
-    "num_epochs": [20000],
-    "sparsity": generate_sparsity_values(5, 10),
-    "lr": [0.005],
-    "momentum": [0.9],
-    "weight_decay": [0.0],
-    "init_kgon": [6],
-    "no_bias": [False],
-    "init_zerobias": [False],
-    "prior_std": [0],
-    "seed": [i for i in range(50)],
-},
-
-    "1.7.0": 
-    {
-    "m": [6],
-    "n": [2],
-    "num_samples": [1000], #Later in iteration 2 we will try 1000 samples
-    "batch_size": [1024],
-    "num_epochs": [20000],
-    "sparsity": generate_sparsity_values(5, 10),
-    "lr": [0.005],
-    "momentum": [0.9],
-    "weight_decay": [0.0],
-    "init_kgon": [6],
-    "no_bias": [False],
-    "init_zerobias": [False],
-    "prior_std": [0],
-    "seed": [i for i in range(50)],
-},
-    
-    
-    }
-
-test_dict = {
-    "m": [6],
-    "n": [2],
-    "num_samples": [100],
-    "batch_size": [300],
-    "num_epochs": [2000],
-    "sparsity": [1],
-    "lr": [0.001],
-    "momentum": [0.9],
-    "weight_decay": [0.0],
-    "init_kgon": [6],
-    "no_bias": [False],
-    "init_zerobias": [False],
-    "prior_std": [10.],
-    "seed": [42]
-}
-
-# %% [markdown]
-# ### Train all models
-
-# %%
 def run_experiments(
     training_dict: Dict[str, List[Any]],
     train_func: Callable[[Dict[str, Any]], Any],
@@ -955,6 +773,9 @@ def run_experiments(
         if os.path.exists(pkl_file_name):
             continue
         params = dict(zip(param_names, combination))
+
+        if not 'use_optimal_solution' in params.keys():
+            raise Exception("use_optimal_solution needs to be defined. Update the training dictionary and rerun this function.")
 
         # Calculate `log_ivl` based on `num_epochs`
         num_epochs = params.get('num_epochs', 100)
@@ -1037,27 +858,216 @@ def plot_experiments(
         plt.close()
 
 
-# %% [markdown]
-# Optimal parameters:
-# {'embedding.weight': tensor([[ 1.4142e+00,  7.0709e-01, -7.0708e-01, -1.4142e+00, -7.0709e-01,
-#           7.0708e-01],
-#         [-9.7212e-06,  1.2247e+00,  1.2247e+00,  4.9839e-06, -1.2247e+00,
-#          -1.2247e+00]]), 'unembedding.weight': tensor([[ 1.4142e+00, -9.7212e-06],
-#         [ 7.0709e-01,  1.2247e+00],
-#         [-7.0708e-01,  1.2247e+00],
-#         [-1.4142e+00,  4.9839e-06],
-#         [-7.0709e-01, -1.2247e+00],
-#         [ 7.0708e-01, -1.2247e+00]]), 'unembedding.bias': tensor([-0.9999, -0.9999, -0.9999, -0.9999, -0.9999, -0.9999])}
+def load_results(version="1.5.0"):
+    
+    file_name = f'../data/logs_loss_{version}'
+    results = []
 
-# %%
-# Run experiments
+    for run_id in range(0, 10000000): # This is a hacky way to load all the results
+        try:
+            with open(f'{file_name}_{run_id}.pkl', "rb") as file:
+                results.append(pickle.load(file))
+        except FileNotFoundError as e:
+            # this is the expected Exception, so just break
+            break
+        except Exception as e:
+            print(e)
+            print(type(e))
+            break
+    return results
 
-# %%
-version = "1.7.0"
-file_name = f'../data/logs_loss_{version}'
-results = run_experiments(
-    training_dicts[version],
-    create_and_train,
-    save=True,
-    file_name=file_name
-    )
+def plot_results(results, plot_number =5):
+    sparsity = [result['parameters']['sparsity'] for result in results]
+    for sparse_value in sparsity:
+        plotted =0
+        print(f"Plot polygons for sparsity={sparse_value}")
+        for index in range(len(results)):
+            
+            STEPS = results[index]['parameters']['log_ivl']
+            if results[index]['parameters']['sparsity'] != sparse_value:
+                continue
+            else:
+                if plotted>=plot_number:
+                    continue
+                plotted+=1
+            logs = results[index]['logs']
+
+
+            losses = [logs.loc[logs['step'] == s, 'loss'].values[0] for s in STEPS]
+
+            NUM_EPOCHS = results['parameters']['num_epochs']
+            PLOT_STEPS = [min(STEPS, key=lambda s: abs(s-i)) for i in [0, 200, 2000, 10000, NUM_EPOCHS - 1]]
+            PLOT_INDICES = [STEPS.index(s) for s in PLOT_STEPS]
+            Ws = [results[index]['weights'][i]['embedding.weight'] for i in PLOT_INDICES]
+            biases = [results[index]['weights'][i]['unembedding.bias'] for i in PLOT_INDICES]
+            model = ToyAutoencoder(6, 2, final_bias=True)
+            new_weights ={}
+            for idx, ndarray in results[index]['weights'][PLOT_INDICES[-1]].items():
+                new_weights[idx] = torch.from_numpy(ndarray)
+
+            criterion=nn.MSELoss()
+        
+            model.load_state_dict(new_weights)
+
+            test_set = SyntheticBinaryValued(10000, 6, sparse_value)
+            mean_loss_test = 0
+            for sample in test_set:
+                output = model(sample)
+                mean_loss_test += criterion(output, sample)
+            # print("Mean loss test:")
+            print(f"index: {index}")
+            print(mean_loss_test/10000)
+
+            plot_losses_and_polygons(STEPS, losses, PLOT_STEPS, Ws, biases)
+            plt.show()
+
+
+training_dicts = {
+   "debug":
+{
+    "m": [6],
+    "n": [2],
+    "num_samples": [100], 
+    "batch_size": [1024],
+    "num_epochs": [4500],
+    "sparsity": generate_sparsity_values(5, 10),
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [0],
+    "seed": [i for i in range(10)],
+    "use_optimal_solution": [True],
+},
+    "1.3.0": 
+    {
+    "m": [6],
+    "n": [2],
+    "num_samples": [100], #Later in iteration 2 we will try 1000 samples
+    "batch_size": [1024],
+    "num_epochs": [20000],
+    "sparsity": generate_sparsity_values(5, 10),
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [0],
+    "seed": [i for i in range(50)],
+    "use_optimal_solution": [True],
+},
+    "1.4.0": 
+    {
+    "m": [6],
+    "n": [2],
+    "num_samples": [10000],
+    "batch_size": [1024],
+    "num_epochs": [20000],
+    "sparsity": generate_sparsity_values(5, 10),
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [0],
+    "seed": [i for i in range(50)],
+    "use_optimal_solution": [True],
+},
+    "1.5.0":  # When I ran this version, I used the wrong initilisation for the k-gon. Because that function was so far not included in the dictionary. 1.6.0 is the same dictionary (unless I add the k-gon initialisation function)
+    {
+    "m": [6],
+    "n": [2],
+    "num_samples": [100], #Later in iteration 2 we will try 1000 samples
+    "batch_size": [1024],
+    "num_epochs": [20000],
+    "sparsity": generate_sparsity_values(5, 10),
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [0],
+    "seed": [i for i in range(50)],
+    "use_optimal_solution": [True],
+}, 
+    "1.6.0": 
+    {
+    "m": [6],
+    "n": [2],
+    "num_samples": [100], #Later in iteration 2 we will try 1000 samples
+    "batch_size": [1024],
+    "num_epochs": [20000],
+    "sparsity": generate_sparsity_values(5, 10),
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [0],
+    "seed": [i for i in range(50)],
+    "use_optimal_solution": [True],
+},
+
+    "1.7.0": 
+    #Big run initialized at optimal solution to see if we get interesting things out of the learning coefficients.
+    {
+    "m": [6],
+    "n": [2],
+    "num_samples": [1000], 
+    "batch_size": [1024],
+    "num_epochs": [20000],
+    "sparsity": generate_sparsity_values(5, 10),
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [0],
+    "seed": [i for i in range(50)],
+    "use_optimal_solution": [True],
+},
+     "1.8.0":  
+    # New quick run to see if the learning coefficients are more interpretable, if we are initializing at a more random spot.
+    {
+    "m": [6],
+    "n": [2],
+    "num_samples": [100], 
+    "batch_size": [1024],
+    "num_epochs": [20000],
+    "sparsity": [x for x in generate_sparsity_values(5, 10) if x != 0],
+    "lr": [0.005],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [4],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [1.],
+    "seed": [i for i in range(50)],
+    "use_optimal_solution": [False],
+},
+    }
+
+test_dict = {
+    "m": [6],
+    "n": [2],
+    "num_samples": [100],
+    "batch_size": [300],
+    "num_epochs": [2000],
+    "sparsity": [1],
+    "lr": [0.001],
+    "momentum": [0.9],
+    "weight_decay": [0.0],
+    "init_kgon": [6],
+    "no_bias": [False],
+    "init_zerobias": [False],
+    "prior_std": [10.],
+    "seed": [42],
+    "use_optimal_solution": [False],
+}
