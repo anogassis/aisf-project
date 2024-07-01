@@ -1,4 +1,4 @@
-from tms_source import create_and_train, run_experiments, training_dicts
+from src.tms_source import create_and_train, run_experiments, training_dicts
 
 version = "1.8.0"
 file_name = f'../data/logs_loss_{version}'
