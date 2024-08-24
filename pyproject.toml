@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "tms"
+version = "0.1.0"
+description = "A collection of functions to train and evaluate toy models of superposition through the lens of developmental interpretability"
+authors = [
+    "Andre Assis",
+    "Tassilo Neubauer",
+]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+devinterp = "^1.0.0"
+torch = "2.3"
+numpy = "1.25"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
