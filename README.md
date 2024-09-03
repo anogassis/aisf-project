@@ -35,4 +35,4 @@ Sparsity = 0.42
 
 
 
-- [ ] there was also this thing in the original paper relating to the sparsity. We should probably check how our results relate to that.
+<!-- - [ ] there was also this thing in the original paper relating to the sparsity. We should probably check how our results relate to that. -->
