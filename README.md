@@ -12,6 +12,10 @@ We first initialized the models as six-gons (the optimal solution for 6 input-pa
 ![image](https://raw.githubusercontent.com/anogassis/aisf-project/main/results/loss_vs_llc_epoch_3243.png)
 ![image](https://raw.githubusercontent.com/anogassis/aisf-project/main/results/loss_vs_llc_epoch_20000.png)
 
+![video](https://github.com/anogassis/aisf-project/blob/main/results/polygon_animation_sparsity_0.42624657926256726_index_0.mp4)
+![video](https://github.com/anogassis/aisf-project/blob/main/results/polygon_animation_sparsity_0.6708070121920944_index_50.mp4)
+![video](https://github.com/anogassis/aisf-project/blob/main/results/polygon_animation_sparsity_0.8111243971624382_index_100.mp4)
+
 
 
 
