@@ -1,5 +1,22 @@
-# aisf-project
-This repository is for the capstone project of the AI Safety Fundamentals - AI Alignment course by BlueDot Impact.
+# Experiments
+
+## Brain dump:
+
+We reproduced the results from the paper and did our first design of experiments. We initially looked at sparsities from 0 to 1 randomly initialized.
+
+Our main experiment was studying the impact of the number of samples [100, 1000] and the initilization of the model either at random or starting at the optimal solution for the high spartity regime for different sparsity levels.
+
+One interesting observation is that for the runs with the optimal solution we notice the lower spasity regime starts with a low LLC and as training progresses it moved towards higher LLC values. The lower the spasity the higher the LLC. Runs close to the high sparsity regime do not fluctuate very much as they are already close to the optimal solution.
+
+At the end of training (epoch 20000) we notice that the lower the sparsity, the higher the test loss and the estimated LLC. This is true for both randomly initialized and optimially initialized models.
+
+Points for improvement:
+
+- We could show the state of the models at Epoch 0 in additional to the other epochs shown.
+- We could run the experiments again with 1000 samples for both random and optimal initialization.
+- We could check and show the differences between train and test loss.
+- We could show videos of the optimally-initialized solution.
+- We could train the models for much longer (40000 epochs)
 
 # Results
 
