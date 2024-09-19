@@ -12,7 +12,6 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 torch = "2.3"
-numpy = "1.25"
 ipykernel = "^6.29.5"
 scikit-learn = "^1.5.1"
 seaborn = "^0.13.2"
