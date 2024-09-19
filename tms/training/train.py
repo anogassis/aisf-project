@@ -16,6 +16,7 @@ def create_and_train(
     m: int,
     n: int,
     num_samples: int,
+    num_samples_test: int,
     batch_size: Optional[int] = 1,
     num_epochs: int = 100,
     sparsity: Union[float, int] = 1,
@@ -42,6 +43,8 @@ def create_and_train(
         The number of output features.
     num_samples : int
         The number of training samples.
+    num_samples_test : int
+        The number of testing samples.
     batch_size : Optional[int], optional
         The batch size for training, by default 1.
     num_epochs : int, optional
@@ -91,21 +94,26 @@ def create_and_train(
         model.unembedding.bias.data = torch.from_numpy(init_weights["b"].flatten()).float()
 
     dataset = SyntheticBinaryValued(num_samples, m, sparsity)
+    dataset_test = SyntheticBinaryValued(num_samples_test, m, sparsity)
     batch_size = batch_size
 
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    dataloader_test = DataLoader(dataset_test, batch_size=batch_size, shuffle=False)
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
     criterion = nn.MSELoss()
 
-    logs = pd.DataFrame([{"loss": None, "acc": None, "step": step} for step in log_ivl])
+    logs = pd.DataFrame([{"loss": None, "acc": None, "test_loss": None, "test_acc":None, "step": step} for step in log_ivl])
 
     model.to(device)
     weights = []
 
     def log(step):
         loss = 0.0
+        loss_test = 0.0
         acc = 0.0
+        acc_test = 0.0
         length = 0
+        length_test = 0
 
         with torch.no_grad():
             for batch in dataloader:
@@ -114,11 +122,19 @@ def create_and_train(
                 loss += criterion(outputs, batch).item() * len(batch) # adding "* len(batch)"
                 acc += (outputs.round() == batch).float().sum().item()
                 length += len(batch)
+            for batch in dataloader_test:
+                batch = batch.to(device)
+                outputs = model(batch)
+                loss_test += criterion(outputs, batch).item() * len(batch)
+                acc_test += (outputs.round() == batch).float().sum().item()
+                length_test += len(batch)
 
         loss /= length
         acc /= length
+        loss_test /= length_test
+        acc_test /= length_test
 
-        logs.loc[logs["step"] == step, ["loss", "acc"]] = [loss, acc]
+        logs.loc[logs["step"] == step, ["loss", "acc", "test_loss", "test_acc"]] = [loss, acc, loss_test, acc_test]
         weights.append({k: v.cpu().detach().clone().numpy() for k, v in model.state_dict().items()})
 
     step = 0
