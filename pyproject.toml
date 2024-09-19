@@ -16,6 +16,7 @@ ipykernel = "^6.29.5"
 scikit-learn = "^1.5.1"
 seaborn = "^0.13.2"
 devinterp = "1.0.0"
+numpy = "1.25"
 
 
 [tool.poetry.group.dev.dependencies]
