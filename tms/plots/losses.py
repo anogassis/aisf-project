@@ -14,8 +14,8 @@ def plot_results_by_indices(results, indices):
     ----------
     results : list
         A list of dictionaries containing the experiment results.
-    plot_number : int, optional
-        The maximum number of plots to display, by default 5.
+    plot_number : list[int]
+        The indices of the results to plot.
     """
     
     for index in indices:
