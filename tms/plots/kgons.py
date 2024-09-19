@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from src.models.autoencoder import count_kgons
+from tms.models.autoencoder import count_kgons
 from scipy.spatial import ConvexHull
 from typing import Any, Dict, List
 from matplotlib import pyplot as plt
