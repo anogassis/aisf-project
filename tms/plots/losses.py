@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-from src.models.autoencoder import ToyAutoencoder
-from src.data.dataset import SyntheticBinaryValued
-from src.plots.kgons import plot_losses_and_polygons
+from tms.models.autoencoder import ToyAutoencoder
+from tms.data.dataset import SyntheticBinaryValued
+from tms.plots.kgons import plot_losses_and_polygons
 
 def plot_results(results, plot_number=5):
     """
