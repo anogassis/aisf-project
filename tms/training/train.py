@@ -88,7 +88,7 @@ def create_and_train(
 
     model.embedding.weight.data = torch.from_numpy(init_weights["W"]).float()
     if use_optimal_solution:
-        init_weights = generate_optimal_solution(m, n, rot=0.0)
+        init_weights = generate_optimal_solution(n, m, rot=0.0)
 
     if "b" in init_weights:
         model.unembedding.bias.data = torch.from_numpy(init_weights["b"].flatten()).float()
@@ -160,4 +160,4 @@ def create_and_train(
             if step in log_ivl:
                 log(step)
 
-    return logs, weights
+    return logs, weights, dataset, dataset_test

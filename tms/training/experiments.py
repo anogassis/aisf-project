@@ -52,12 +52,14 @@ def run_experiments(
         params['log_ivl'] = steps
         print(f"starting run {run_id}")
 
-        logs, weights = train_func(**params)
+        logs, weights, dataset, dataset_test = train_func(**params)
         run_result = {
             "run_id": run_id,
             "parameters": params,
             "logs": logs,
-            "weights": weights
+            "weights": weights,
+            "dataset": dataset,
+            "dataset_test": dataset_test,
         }
 
         if save and file_name:
