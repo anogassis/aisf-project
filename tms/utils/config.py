@@ -18,7 +18,7 @@ training_dicts = {
         "num_samples": [100],
         "num_samples_test": [100],
         "batch_size": [1024],
-        "num_epochs": [4500],
+        "num_epochs": [100],
         "sparsity": generate_sparsity_values(5, 3),
         "lr": [0.005],
         "momentum": [0.9],

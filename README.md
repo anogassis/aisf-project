@@ -10,13 +10,8 @@ One interesting observation is that for the runs with the optimal solution we no
 
 At the end of training (epoch 20000) we notice that the lower the sparsity, the higher the test loss and the estimated LLC. This is true for both randomly initialized and optimially initialized models.
 
-Points for improvement:
 
-- We could show the state of the models at Epoch 0 in additional to the other epochs shown.
-- We could run the experiments again with 1000 samples for both random and optimal initialization.
-- We could check and show the differences between train and test loss.
-- We could show videos of the optimally-initialized solution.
-- We could train the models for much longer (40000 epochs)
+
 
 # Results
 
@@ -52,3 +47,15 @@ Sparsity = 0.42
 
 
 - [ ] there was also this thing in the original paper relating to the sparsity. We should probably check how our results relate to that.
+
+## TODO
+
+
+- [ ] training models
+    - [ ] We could show the state of the models at Epoch 0 in additional to the other epochs shown.
+    - [ ] We could run the experiments again with 1000 samples for both random and optimal initialization.
+    - [ ] We could check and show the differences between train and test loss.
+    - [ ] We could show videos of the optimally-initialized solution.
+    - [ ] We could train the models for much longer (40000 epochs)
+- [ ] add project path with dotenv and simplify paths used in project
+    

@@ -1,6 +1,7 @@
 import pickle
 import glob
 import numpy as np
+import os
 
 def generate_2d_kgon_vertices(k, rot=0., pad_to=None, force_length=0.9):
     """
@@ -184,6 +185,13 @@ def load_results(data_dir, version="1.5.0"):
     FileNotFoundError
         If no files matching the file pattern are found.
     """
+    
+    all_runs_file_pattern = f'{data_dir}/logs_loss_{version}all_runs.pkl'
+    if os.path.exists(all_runs_file_pattern):
+        with open(all_runs_file_pattern, "rb") as file:
+            return pickle.load(file)
+    
+    # If the all_runs file does not exist, load individual files
     file_pattern = f'{data_dir}/logs_loss_{version}_*.pkl'
     results = []
 
