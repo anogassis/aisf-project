@@ -52,12 +52,14 @@ def run_experiments(
         params['log_ivl'] = steps
         print(f"starting run {run_id}")
 
-        logs, weights = train_func(**params)
+        logs, weights, dataset, dataset_test = train_func(**params)
         run_result = {
             "run_id": run_id,
             "parameters": params,
             "logs": logs,
-            "weights": weights
+            "weights": weights,
+            "dataset": dataset,
+            "dataset_test": dataset_test,
         }
 
         if save and file_name:
@@ -74,7 +76,7 @@ def run_experiments(
         with open(pkl_file_name, 'rb') as file:
             all_results.append(pickle.load(file))
     if save:
-        with open(file_name + 'all_runs', 'wb') as file:
+        with open(file_name + 'all_runs.pkl', 'wb') as file:
             pickle.dump(all_results, file)
 
     return all_results

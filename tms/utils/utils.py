@@ -159,7 +159,8 @@ def generate_sparsity_values(scale: float, count: int) -> np.ndarray:
     # Generate exponential values from 0 to scale
     x = np.linspace(0, scale, count)
     # Apply the exponential decay function
-    values = 1 - np.exp(-x)
+    values = np.round(1 - np.exp(-x), 3)
+    
     return values
 
 def load_results(data_dir, version="1.5.0"):
