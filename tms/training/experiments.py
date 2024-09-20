@@ -76,7 +76,7 @@ def run_experiments(
         with open(pkl_file_name, 'rb') as file:
             all_results.append(pickle.load(file))
     if save:
-        with open(file_name + 'all_runs', 'wb') as file:
+        with open(file_name + 'all_runs.pkl', 'wb') as file:
             pickle.dump(all_results, file)
 
     return all_results
