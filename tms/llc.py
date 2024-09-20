@@ -7,6 +7,7 @@ import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from torch.utils.data import TensorDataset
+
 # from torch.nn import functional as F
 from devinterp.slt.sampler import estimate_learning_coeff_with_summary
 from devinterp.optim.sgld import SGLD
@@ -19,6 +20,7 @@ from tms.models.autoencoder import ToyAutoencoder
 
 NUM_FEATURES = 6
 NUM_HIDDEN_UNITS = 2
+
 
 def sweep_lambdahat_estimation_hyperparams(
     model,
@@ -92,23 +94,24 @@ def sweep_lambdahat_estimation_hyperparams(
     return pd.DataFrame(observations)
 
 
-def estimate_llc(results, version, data_directory = "../data", 
-                hyperparam_combos = [(300, 0.001)],
-                snapshot_indices = [0, 9, 18, 27, 36],
-                num_samples_test = 200,
-                num_chains = 5,
-                num_draws= 500,
-                num_burnin_steps=0,
-                ):
+def estimate_llc(
+    results,
+    version,
+    data_directory="../data",
+    hyperparam_combos=[(300, 0.001)],
+    snapshot_indices=[0, 9, 18, 27, 36],
+    num_samples_test=200,
+    num_chains=5,
+    num_draws=500,
+    num_burnin_steps=0,
+):
     llc_estimate_filename = f"{data_directory}/llc_estimate_{version}"
 
     # Load the model
-    bias = results[0]['parameters']['no_bias']
-    num_features = results[0]['parameters']['m']
-    num_hidden_units = results[0]['parameters']['n']
-    print(f"bias: {bias}, num_features: {num_features}, num_hidden_units: {num_hidden_units}")
+    bias = results[0]["parameters"]["no_bias"]
+    num_features = results[0]["parameters"]["m"]
+    num_hidden_units = results[0]["parameters"]["n"]
     model = ToyAutoencoder(num_features, num_hidden_units, final_bias=not bias)
-
 
     for index in tqdm(range(len(results))):
         for snapshot_index in snapshot_indices:
@@ -132,10 +135,8 @@ def estimate_llc(results, version, data_directory = "../data",
                 hyperparam_combos=hyperparam_combos,
                 num_burnin_steps=num_burnin_steps,
             )
-            # plot_lambdahat_estimation_hyperparams(llc_estimate)
-
             llc_estimate.to_csv(file_name)
-    
+
     return get_llc_data(results, version, data_directory)
 
 
@@ -147,7 +148,7 @@ def get_llc_data(results, version, data_directory):
     llc_data = pd.DataFrame()
     # Loop through the file paths, read each file and append to the list
     for index in range(len(results)):
-        pattern = f"llc_estimate_{version}_{index}_"  
+        pattern = f"llc_estimate_{version}_{index}_"
         file_paths = [
             os.path.join(data_directory, f)
             for f in os.listdir(data_directory)
