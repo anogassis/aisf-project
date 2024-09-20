@@ -7,9 +7,10 @@ import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from torch.utils.data import TensorDataset
-from torch.nn import functional as F
+# from torch.nn import functional as F
 from devinterp.slt.sampler import estimate_learning_coeff_with_summary
 from devinterp.optim.sgld import SGLD
+from devinterp.utils import evaluate_mse
 
 from tms.utils.config import DEVICE
 from tms.data.dataset import SyntheticBinaryValued
@@ -50,7 +51,7 @@ def sweep_lambdahat_estimation_hyperparams(
         observation = estimate_learning_coeff_with_summary(
             model,
             loader,
-            F.mse_loss,
+            evaluate=evaluate_mse,
             device=device,
             sampling_method=SGLD,
             optimizer_kwargs={"lr": lr, **sgld_kwargs},
