@@ -164,3 +164,4 @@ cython_debug/
 
 # keep all_runs.pkl
 !/data/*all_runs.pkl
+!/data/*.zip
